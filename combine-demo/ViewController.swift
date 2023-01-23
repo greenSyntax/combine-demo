@@ -6,9 +6,12 @@
 //
 
 import UIKit
+import Combine
 
 class ViewController: UIViewController {
 
+    private var observer: AnyCancellable?
+    
     private lazy var api = APIClient()
     private var dataSource: [UserModel]? = [] {
         didSet {
@@ -28,7 +31,20 @@ class ViewController: UIViewController {
     
     private func getData() {
         api.delegate = self
-        api.get(URL(string: "https://jsonplaceholder.typicode.com/users")!)
+        
+        observer = api.get(URL(string: "https://jsonplaceholder.typicode.com/users")!)
+            .receive(on: DispatchQueue.main)
+            .sink(receiveCompletion: { completionState in
+                switch completionState {
+                case .failure(let err):
+                    print("Error: \(err.localizedDescription)")
+                case .finished:
+                    print("Finished")
+                }
+            }, receiveValue: { models in
+                print("Receive Value: \(models.count)")
+                self.dataSource = models
+            })
     }
     
     private func setTableView() {
